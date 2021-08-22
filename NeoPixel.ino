@@ -10,6 +10,7 @@
 **********************************************************************************************************/
 
 #include <Adafruit_NeoPixel.h>
+#include<stdlib.h>
 
 // the data pin for the NeoPixels
 int neoPixelPin = 15;//Change the pin numbers according to your board
@@ -26,11 +27,23 @@ int start2 = 3; // 2 for 8 neopixel ring, 6 for 24 neopixel ring and so on
 int start3 = 6; // 4 for 8 neopixel ring, 12 for 24 neopixel ring and so on
 int start4 = 9; // 6 for 8 neopixel ring, 18 for 24 neopixel ring and so on
 
-int brightness = 90;
-int brightDirection = -15;
+int brightness = 20;
+
 #define DELAY_TIME (50)
 
 unsigned long startTime;
+uint32_t magenta = strip.Color(255, 0, 255);
+uint32_t red = strip.Color(255, 0, 0);
+uint32_t green = strip.Color(0, 255, 0);
+uint32_t blue = strip.Color(0, 0, 255);
+uint32_t yellow = strip.Color(255, 255, 0);
+uint32_t cyan = strip.Color(0, 255, 255);
+uint32_t pink = strip.Color(255, 51, 153);
+uint32_t orange = strip.Color(255, 128, 0);
+
+uint32_t colors[] = {red, green, blue, magenta, yellow, cyan, pink, orange};
+
+int last = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -38,35 +51,79 @@ void setup() {
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   startTime = millis();
-
-  //allOff();
 }
 
 void loop() {
   bool but1 = digitalRead(BUTTON_PIN1);
-
+  
   if (but1 == HIGH) {
-     for ( int i = 1; i < 900 + 1; i++ ) {
+      int position = index();
+
+      if (position > 8) {
+        circle();
+      } else {
+         color(colors[position]);
+      }
+  }
+}
+
+int index() {
+  int r = rand() % 15;
+      
+  if (r == last) {
+    r = index();
+  }
+
+  last = r;
+  return r;
+}
+
+void circle() {
+  for ( int i = 1; i < 450 + 1; i++ ) {
       delay(10);
       if ( startTime + DELAY_TIME < millis() ) {
         activatecircle();
         startTime = millis();
       }
     }
-  }
-  else {
-    allOff();
-  }
+    allOff(); 
+}
 
+
+void color(uint32_t color) {
+  allOff();
+  strip.setBrightness(brightness);
+  for ( int i = 0; i < numPixels; i++ ) {
+    delay(250);
+    strip.setPixelColor(i, color);
+    strip.show();
+  }
+  blink(color);
+}
+
+void blink(uint32_t color) {
+   for ( int i = 0; i < 3; i++ ) {
+      allOff();
+      delay(500);
+      for ( int i = 0; i < numPixels; i++ ) {
+        strip.setPixelColor(i, color);
+      }
+      strip.show();
+      delay(500);
+   }
+   allOff();
 }
 
 
 void allOff() {
+    strip.clear();
+    uint32_t off = strip.Color(0, 0, 0);
     for( int i = 0; i<numPixels; i++){
-        strip.setPixelColor(i, strip.Color(0, 0, 0));
+        strip.setPixelColor(i, off);
         strip.show();
-    }   
+    }
 }
+
 //Circling effect
 void activatecircle() {
   strip.setBrightness(brightness);
@@ -93,42 +150,6 @@ void activatecircle() {
 
   strip.show();
 }
-//Blinking Effect. The RGB Colours are based on the Google's Logo
-void activateblink() {
-
-  for ( int i = start1; i < start1 + 1; i++ ) {
-    strip.setPixelColor(i, 30, 127, 239 );
-    strip.setBrightness(brightness);
-    strip.show();
-
-    adjustBrightness();
-  }
-
-  for ( int i = start2; i < start2 + 1 ; i++ ) {
-    strip.setPixelColor(i, 255, 62, 48 );
-    strip.setBrightness(brightness);
-    strip.show();
-
-    adjustBrightness();
-  }
-
-  for ( int i = start3; i < start3 + 1; i++ ) {
-    strip.setPixelColor(i, 247, 181, 41 );
-    strip.setBrightness(brightness);
-    strip.show();
-
-    adjustBrightness();
-  }
-  for ( int i = start4; i < start4 + 1; i++ ) {
-    strip.setPixelColor(i, 23, 156, 82 );
-    strip.setBrightness(brightness);
-    strip.show();
-
-    adjustBrightness();
-  }
-
-  strip.show();
-}
 
 void adjustStarts() {
   start1 = incrementStart(start1);
@@ -136,7 +157,6 @@ void adjustStarts() {
   start3 = incrementStart(start3);
   start4 = incrementStart(start4);
 }
-
 
 int incrementStart(int startValue) {
   startValue = startValue + 1;
@@ -146,17 +166,21 @@ int incrementStart(int startValue) {
   return startValue;
 }
 
-void adjustBrightness() {
-  brightness = brightness + brightDirection;
-  if ( brightness < 0 ) {
-    brightness = 0;
-    brightDirection = -brightDirection;
-  }
-  else if ( brightness > 255 ) {
-    brightness = 255;
-    brightDirection = -brightDirection;
-  }
+void rgbFadeInAndOut(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
+  for(uint8_t b = 0; b <255; b++) {
+     for(uint8_t i=0; i < strip.numPixels(); i++) {
+        strip.setPixelColor(i, red * b/255, green * b/255, blue * b/255);
+     }
 
-  // output the serial
-  Serial.println( brightness );
-}
+     strip.show();
+     delay(wait);
+  };
+
+  for(uint8_t b=255; b > 0; b--) {
+     for(uint8_t i = 0; i < strip.numPixels(); i++) {
+        strip.setPixelColor(i, red * b/255, green * b/255, blue * b/255);
+     }
+     strip.show();
+     delay(wait);
+  };
+};
